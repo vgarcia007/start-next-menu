@@ -169,7 +169,7 @@ Item {
         FocusScope {
             id: rootItem
             Layout.minimumWidth:  Kirigami.Units.gridUnit*30
-            Layout.maximumWidth:  minimumWidth
+            Layout.maximumWidth:  Layout.minimumWidth
             Layout.minimumHeight: (root.cellSizeHeight *  Plasmoid.configuration.numberRows) + searchField.implicitHeight + (Plasmoid.configuration.viewUser ? main.sizeImage*0.5 : Kirigami.Units.gridUnit * 1.5 ) +  Kirigami.Units.gridUnit * 6.2
             Layout.maximumHeight: (root.cellSizeHeight *  Plasmoid.configuration.numberRows) + searchField.implicitHeight + (Plasmoid.configuration.viewUser ? main.sizeImage*0.5 : Kirigami.Units.gridUnit * 1.5 ) +  Kirigami.Units.gridUnit * 6.2
             focus: true
@@ -257,7 +257,7 @@ Item {
                         runnerModel.query = text;
                         // while typing, search results replace the list views
                         if (text !== "") {
-                            activeTab = 1
+                            rootItem.activeTab = 1
                         }
                     }
 
