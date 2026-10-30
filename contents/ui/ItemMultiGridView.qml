@@ -31,6 +31,10 @@ PlasmaComponents.ScrollView {
 
     property bool grabFocus: false
 
+    // Renders the categories as one continuous flat list
+    // (like the "All apps" list) instead of separate grids with headers
+    property bool listMode: false
+
     property alias model: repeater.model
     property alias count: repeater.count
     property alias flickableItem: flickable
@@ -82,6 +86,13 @@ PlasmaComponents.ScrollView {
         contentHeight: itemColumn.implicitHeight
         //focusPolicy: Qt.NoFocus
 
+        Kirigami.Heading {
+            id: dummyHeading
+            visible: false
+            width: 0
+            level: 4
+        }
+
         Column {
             id: itemColumn
 
@@ -92,7 +103,9 @@ PlasmaComponents.ScrollView {
 
                 delegate: Item {
                     width: itemColumn.width
-                    height: gridView.height + gridViewLabel.height +  Kirigami.Units.largeSpacing * 2
+                    height: itemMultiGrid.listMode
+                             ? gridView.height + Kirigami.Units.smallSpacing * 2
+                             : gridView.height + gridViewLabel.height +  Kirigami.Units.largeSpacing * 2
                     visible:  gridView.count > 0
 
                     property Item itemGrid: gridView
@@ -106,6 +119,7 @@ PlasmaComponents.ScrollView {
                         width: parent.width - x
                         height: dummyHeading.height
 
+                        visible: !itemMultiGrid.listMode
                         elide: Text.ElideRight
                         wrapMode: Text.NoWrap
                         opacity: 1.0
@@ -128,15 +142,18 @@ PlasmaComponents.ScrollView {
                         id: gridView
 
                         anchors {
-                            top: gridViewLabel.bottom
-                            topMargin: Kirigami.Units.largeSpacing
+                            top: itemMultiGrid.listMode ? parent.top : gridViewLabel.bottom
+                            topMargin: itemMultiGrid.listMode ? 0 : Kirigami.Units.largeSpacing
                         }
 
-                        width: parent.width
-                        height: Math.ceil(count / Plasmoid.configuration.numberColumns) * itemMultiGrid.cellHeight
-                        cellWidth: itemMultiGrid.cellWidth
+                        // In list mode: one full-width row per item (like "All apps")
+                        height: itemMultiGrid.listMode
+                                 ? count * itemMultiGrid.cellHeight
+                                 : Math.ceil(count / Plasmoid.configuration.numberColumns) * itemMultiGrid.cellHeight
+                        cellWidth: itemMultiGrid.listMode ? itemColumn.width : itemMultiGrid.cellWidth
                         cellHeight: itemMultiGrid.cellHeight
-                        iconSize: root.iconSize
+                        iconSize: itemMultiGrid.listMode ? 24 : root.iconSize
+                        listMode: itemMultiGrid.listMode
 
                         verticalScrollBarPolicy: PlasmaComponents.ScrollBar.AlwaysOff
 

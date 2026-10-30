@@ -69,11 +69,15 @@ Item {
 
         property bool searching: (searchField.text != "")
 
-        property bool showFavorites
+        // which tab is active: 0 = Favorites, 1 = All apps
+        property int activeTab: 1
+
+        // true while the favorites grid is the one that is shown
+        property bool showFavorites: activeTab === 0
 
         onVisibleChanged: {
             if (visible) {
-                root.showFavorites = Plasmoid.configuration.showFavoritesFirst
+                root.activeTab = Plasmoid.configuration.showFavoritesFirst ? 0 : 1
                 var pos = popupPosition(width, height);
                 x = pos.x;
                 y = pos.y;
@@ -104,12 +108,12 @@ Item {
         function reset() {
             //searchField.text = "";
 
-            if(showFavorites)
+            if (searching)
+                runnerGrid.tryActivate(0,0)
+            else if (showFavorites)
                 globalFavoritesGrid.tryActivate(0,0)
             else
                 mainColumn.visibleGrid.tryActivate(0,0)
-
-
         }
 
         function popupPosition(width, height) {
@@ -170,9 +174,7 @@ Item {
             Layout.maximumHeight: (root.cellSizeHeight *  Plasmoid.configuration.numberRows) + searchField.implicitHeight + (Plasmoid.configuration.viewUser ? main.sizeImage*0.5 : Kirigami.Units.gridUnit * 1.5 ) +  Kirigami.Units.gridUnit * 6.2
             focus: true
 
-            property int showApps: Plasmoid.configuration.viewUser ? 0 : 1
-            property string textcategory: showApps === 0 ? i18n("All apps") : i18n("Favorites")
-
+            property alias activeTab: root.activeTab
 
             KCoreAddons.KUser {   id: kuser  }
 
@@ -208,18 +210,6 @@ Item {
                 id: delegateHighlight
                 visible: false
                 z: -1 // otherwise it shows ontop of the icon/label and tints them slightly
-            }
-
-            Kirigami.Heading {
-                id: dummyHeading
-                visible: false
-                width: 0
-                level: 5
-            }
-
-            TextMetrics {
-                id: headingMetrics
-                font: dummyHeading.font
             }
 
             KSvg.FrameSvgItem {
@@ -265,8 +255,9 @@ Item {
                     font.pointSize: Kirigami.Theme.defaultFont.pointSize
                     onTextChanged: {
                         runnerModel.query = text;
+                        // while typing, search results replace the list views
                         if (text !== "") {
-                            showFavorites = false
+                            activeTab = 1
                         }
                     }
 
@@ -282,10 +273,12 @@ Item {
 
                                         if (event.key === Qt.Key_Down || event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
                                             event.accepted = true;
-                                            if(root.showFavorites)
-                                            globalFavoritesGrid.tryActivate(0,0)
+                                            if (root.searching)
+                                                runnerGrid.tryActivate(0,0)
+                                            else if (root.showFavorites)
+                                                globalFavoritesGrid.tryActivate(0,0)
                                             else
-                                            mainColumn.visibleGrid.tryActivate(0,0)
+                                                mainColumn.visibleGrid.tryActivate(0,0)
                                         }
                                     }
 
@@ -327,21 +320,41 @@ Item {
 
             }
 
-            MenuButton {
-                id: button
-                width: Math.max(110, implicitWidth)
-                height: 40
-                text: rootItem.textcategory.trim()
+            Row {
+                id: tabBar
+                height: Math.max(tabsFavorites.implicitHeight, tabsAllApps.implicitHeight)
                 anchors.left: parent.left
                 anchors.top: rowSearchField.bottom
                 anchors.topMargin: Kirigami.Units.smallSpacing
                 anchors.leftMargin: parent.width - headingSvg.height - width - 16
-                onClicked: rootItem.showApps = rootItem.showApps === 0 ? 1 : 0
+
+                MenuTab {
+                    id: tabsFavorites
+                    tabActive: rootItem.activeTab === 0
+                    text: i18n("Favorites")
+                    onClicked: {
+                        rootItem.activeTab = 0
+                        if (root.searching) {
+                            searchField.clear()
+                        }
+                    }
+                }
+                MenuTab {
+                    id: tabsAllApps
+                    tabActive: rootItem.activeTab === 1
+                    text: i18n("All apps")
+                    onClicked: {
+                        rootItem.activeTab = 1
+                        if (root.searching) {
+                            searchField.clear()
+                        }
+                    }
+                }
             }
 
             ItemGridView {
                 id: globalFavoritesGrid
-                visible: rootItem.showApps === 0
+                visible: root.showFavorites && !root.searching
                 anchors {
                     top: rowSearchField.bottom
                     topMargin: Kirigami.Units.gridUnit * 3
@@ -376,7 +389,7 @@ Item {
             Column {
                 id: places
                 width: headingSvg.height*.8
-                anchors.top: button.bottom
+                anchors.top: tabBar.bottom
                 anchors.topMargin: Kirigami.Units.smallSpacing * 2
                 anchors.bottom: shutdownIcon.top
                 anchors.bottomMargin: Kirigami.Units.smallSpacing * 2
@@ -475,7 +488,7 @@ Item {
             //
             Item{
                 id: mainGrids
-                visible: !globalFavoritesGrid.visible
+                visible: root.searching || !root.showFavorites
 
                 anchors {
                     top: rowSearchField.bottom
@@ -514,13 +527,13 @@ Item {
                         cellWidth: width - Kirigami.Units.gridUnit
                         cellHeight: 44
                         iconSize: 24
-                        enabled: (opacity == 1) ? 1 : 0
+                        visible: !root.searching
+                        enabled: visible ? 1 : 0
                         z:  enabled ? 5 : -1
                         dropEnabled: false
                         dragEnabled: false
-                        opacity: root.searching ? 0 : 1
-                        onOpacityChanged: {
-                            if (opacity == 1) {
+                        onVisibleChanged: {
+                            if (visible) {
                                 //allAppsGrid.scrollBar.flickableItem.contentY = 0;
                                 mainColumn.visibleGrid = allAppsGrid;
                             }
@@ -532,8 +545,10 @@ Item {
                         id: runnerGrid
                         width: rootItem.width*.6
                         height: parent.height
-                        cellWidth:   root.cellSizeWidth
-                        cellHeight:  root.cellSizeHeight
+                        // search results are rendered as a flat list, like the "All apps" list
+                        listMode: true
+                        cellWidth:   width - Kirigami.Units.gridUnit
+                        cellHeight:  44
                         enabled: (opacity == 1.0) ? 1 : 0
                         z:  enabled ? 5 : -1
                         model: runnerModel
@@ -571,7 +586,7 @@ Item {
                                         } else if (event.text !== "") {
                                             event.accepted = true;
                                             searchField.appendText(event.text);
-                                            rootItem.showApps = 1
+                                            rootItem.activeTab = 1
                                         }
                                     }
                 }
