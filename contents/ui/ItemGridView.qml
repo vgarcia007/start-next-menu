@@ -438,7 +438,10 @@ FocusScope {
                                         root.toggle();
                                     }
 
-                                    itemGrid.itemActivated(pressedItem.itemIndex, "", null);
+                                    // pressedItem may have been reset already
+                                    // (root.toggle() above closes the menu)
+                                    if (pressedItem)
+                                        itemGrid.itemActivated(pressedItem.itemIndex, "", null);
                                 } else if (mouse.button === Qt.LeftButton) {
                                     root.toggle();
                                 }

@@ -141,6 +141,10 @@ PlasmaComponents.ScrollView {
                     ItemGridView {
                         id: gridView
 
+                        // The view needs an explicit width: with the default (0)
+                        // a clipped list view would render nothing.
+                        width: itemColumn.width
+
                         anchors {
                             top: itemMultiGrid.listMode ? parent.top : gridViewLabel.bottom
                             topMargin: itemMultiGrid.listMode ? 0 : Kirigami.Units.largeSpacing
