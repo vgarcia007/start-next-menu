@@ -77,7 +77,9 @@ Item {
 
         onVisibleChanged: {
             if (visible) {
-                root.activeTab = Plasmoid.configuration.showFavoritesFirst ? 0 : 1
+                // Every time the menu opens: clear the search and start on the Favorites tab
+                searchField.text = ""
+                root.activeTab = 0
                 var pos = popupPosition(width, height);
                 x = pos.x;
                 y = pos.y;
