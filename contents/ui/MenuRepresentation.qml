@@ -85,6 +85,11 @@ Item {
                 y = pos.y;
                 reset();
                 animation1.start()
+                Qt.callLater(function() {
+                    if (root.visible) {
+                        searchField.forceActiveFocus()
+                    }
+                })
             }else{
                 rootItem.opacity = 0
             }
@@ -490,7 +495,9 @@ Item {
             //
             Item{
                 id: mainGrids
-                visible: root.searching || !root.showFavorites
+                // Always laid out: the search result grid inside needs its
+                // initial layout pass even when the Favorites tab is shown.
+                // (allAppsGrid itself is hidden while favorites/search apply)
 
                 anchors {
                     top: rowSearchField.bottom
@@ -529,7 +536,7 @@ Item {
                         cellWidth: width - Kirigami.Units.gridUnit
                         cellHeight: 44
                         iconSize: 24
-                        visible: !root.searching
+                        visible: !root.searching && !root.showFavorites
                         enabled: visible ? 1 : 0
                         z:  enabled ? 5 : -1
                         dropEnabled: false
